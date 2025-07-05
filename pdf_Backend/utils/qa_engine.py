@@ -1,22 +1,30 @@
-from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, ServiceContext
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.mock import MockLLM  # or keep using default one
+from llama_index.llms.groq import Groq
+from dotenv import load_dotenv
+import os
+load_dotenv() 
+
+groq_api_key=os.environ["GROQ_API_KEY"] 
+
 
 def answer_question(filename: str, question: str) -> str:
     text_path = f"data/{filename}.txt"
-    
+
     reader = SimpleDirectoryReader(input_files=[text_path])
     docs = reader.load_data()
 
-    # ✅ Use local HuggingFace embeddings
-    embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    # Local embeddings (still free)
+    Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-    service_context = ServiceContext.from_defaults(embed_model=embed_model)
+    # ✅ Use Groq LLM (e.g., Mixtral or Llama3)
+    Settings.llm = Groq(model="llama3-70b-8192")  # or "llama3-70b-8192", "gemma-7b-it"
 
-    # Now build index using local embeddings
-    index = VectorStoreIndex.from_documents(docs, service_context=service_context)
-
+    # Build index
+    index = VectorStoreIndex.from_documents(docs)
     query_engine = index.as_query_engine()
     response = query_engine.query(question)
-    
+
     return str(response)
+
+
